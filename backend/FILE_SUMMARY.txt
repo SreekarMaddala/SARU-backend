@@ -32,3 +32,59 @@ Summary of backend files and their purposes:
 - Includes FastAPI, Uvicorn, SQLAlchemy, Alembic, psycopg2-binary, python-dotenv, and Pydantic.
 
 This summary provides an overview of the backend files and their roles in the project.
+
+## Frontend (React + Vite + Tailwind CSS)
+
+### Overview
+The frontend is a React application built with Vite as the build tool and Tailwind CSS for styling. It provides a user interface to display feedback data fetched from the backend API.
+
+### Key Files and Components
+
+1. package.json
+- Defines the project name as "feedback-mvp-frontend".
+- Includes scripts for development (dev), building (build), linting, and preview.
+- Dependencies: React and React DOM for the UI framework.
+- DevDependencies: Vite for fast development, Tailwind CSS for styling, ESLint for code quality, and related plugins.
+
+2. vite.config.js
+- Configuration file for Vite, specifying the React plugin for JSX support.
+
+3. index.html
+- The main HTML template that serves as the entry point for the React app.
+- Includes the root div where the React app is mounted.
+
+4. src/main.jsx
+- Entry point for the React application.
+- Renders the App component into the DOM using ReactDOM.
+
+5. src/App.jsx
+- Main application component.
+- Fetches feedback data from the backend API endpoint '/feedback' on component mount.
+- Displays a title "Feedback Collector MVP 🚀" and renders the FeedbackTable component with the fetched data.
+
+6. src/components/FeedbackTable.jsx
+- Reusable component that renders a table displaying feedback entries.
+- Columns include ID, Company ID, Channel, Text, Sentiment, Topics, and Created At.
+- Maps over the feedbacks array and formats dates for display.
+
+7. tailwind.config.js
+- Configuration for Tailwind CSS, defining custom themes or extensions if any.
+
+8. postcss.config.js
+- Configuration for PostCSS, used by Tailwind CSS for processing styles.
+
+9. src/index.css
+- Global CSS file, likely includes Tailwind directives (@tailwind base, components, utilities).
+
+### Functionality Implemented
+- Fetches and displays feedback data from the backend.
+- Responsive table layout using Tailwind CSS classes.
+- No form for submitting new feedback yet; currently read-only display.
+
+### Setup and Deployment
+- Install dependencies: `cd frontend && npm install`
+- Start development server: `npm run dev`
+- Build for production: `npm run build`
+- Deploy to platforms like Vercel or Netlify, publishing the 'dist' directory.
+
+This completes the summary of the entire project, covering both backend and frontend components.
