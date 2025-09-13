@@ -4,7 +4,6 @@ from database import Base
 
 class Feedback(Base):
     __tablename__ = "feedback"
-
     id = Column(Integer, primary_key=True, index=True)
     company_id = Column(String, index=True)
     channel = Column(String)
