@@ -1,6 +1,6 @@
 from sqlalchemy.orm import Session
-from models import Feedback
-from schemas import FeedbackCreate
+from ..models.feedback import Feedback
+from ..schemas.feedback_schema import FeedbackCreate
 from typing import List
 
 def get_feedbacks(db: Session):

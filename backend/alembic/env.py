@@ -16,7 +16,7 @@ if config.config_file_name is not None:
     fileConfig(config.config_file_name)
 
 # Import your SQLAlchemy Base
-from database import Base  # Make sure this points to your database.py
+from models.feedback import Base  # Make sure this points to your database.py
 target_metadata = Base.metadata
 def run_migrations_offline() -> None:
     """Run migrations in 'offline' mode."""

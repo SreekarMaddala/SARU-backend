@@ -1,6 +1,6 @@
-from database import get_db
-from crud import create_feedback, get_feedbacks
-from schemas import FeedbackCreate
+from ..database import get_db
+from ..crud.feedback_crud import create_feedback, get_feedbacks
+from ..schemas.feedback_schema import FeedbackCreate
 from sqlalchemy.orm import Session
 
 def test_db_connection():
