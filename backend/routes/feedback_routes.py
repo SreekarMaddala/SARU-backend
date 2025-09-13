@@ -19,9 +19,13 @@ def read_feedbacks(db: Session = Depends(get_db)):
     feedbacks = get_feedbacks(db)
     return feedbacks
 
-@router.post("/feedback", response_model=Feedback)
-def create_new_feedback(feedback: FeedbackCreate, db: Session = Depends(get_db)):
-    return create_feedback(db, feedback)
+@router.post("/feedback/bulk")
+def add_feedback_bulk(feedbacks: list[FeedbackCreate], db: Session = Depends(get_db)):
+    # Convert Pydantic objects to dicts
+    feedback_dicts = [fb.dict() for fb in feedbacks]
+    created_feedbacks = create_feedback_bulk(db, feedback_dicts)
+    return {"inserted": len(created_feedbacks)}
+
 
 @router.post("/feedback/upload_csv")
 async def upload_csv(file: UploadFile = File(...), db: Session = Depends(get_db)):
