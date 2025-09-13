@@ -12,7 +12,6 @@ def test_db_connection():
     found = any(f.id == created_feedback.id for f in feedbacks)
     print("Test feedback found in DB:", found)
     return found
-
 if __name__ == "__main__":
     success = test_db_connection()
     if success:
