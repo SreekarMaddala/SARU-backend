@@ -18,10 +18,6 @@ if config.config_file_name is not None:
 # Import your SQLAlchemy Base
 from database import Base  # Make sure this points to your database.py
 target_metadata = Base.metadata
-
-# --------------------------
-# Offline migrations
-# --------------------------
 def run_migrations_offline() -> None:
     """Run migrations in 'offline' mode."""
     context.configure(
@@ -33,10 +29,6 @@ def run_migrations_offline() -> None:
 
     with context.begin_transaction():
         context.run_migrations()
-
-# --------------------------
-# Online migrations
-# --------------------------
 def run_migrations_online() -> None:
     """Run migrations in 'online' mode."""
     connectable = create_engine(DATABASE_URL, poolclass=pool.NullPool)

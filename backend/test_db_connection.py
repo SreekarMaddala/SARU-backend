@@ -11,11 +11,6 @@ def test_db_connection():
     feedbacks = get_feedbacks(db)
     found = any(f.id == created_feedback.id for f in feedbacks)
     print("Test feedback found in DB:", found)
-
-    # Clean up: delete the test feedback (optional)
-    # db.delete(created_feedback)
-    # db.commit()
-
     return found
 
 if __name__ == "__main__":
