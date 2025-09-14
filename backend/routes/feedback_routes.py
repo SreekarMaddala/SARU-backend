@@ -1,9 +1,9 @@
 from fastapi import APIRouter, Depends, HTTPException, UploadFile, File
 from sqlalchemy.orm import Session
-from ..database import get_db
-from ..models.feedback import Feedback
-from ..schemas.feedback_schema import FeedbackCreate, Feedback, FeedbackBulkCreate
-from ..crud.feedback_crud import get_feedbacks, create_feedback, create_feedbacks_bulk
+from backend.database import get_db
+from backend.models.feedback import Feedback
+from backend.schemas.feedback_schema import FeedbackCreate, Feedback, FeedbackBulkCreate
+from backend.crud.feedback_crud import get_feedbacks, create_feedback, create_feedbacks_bulk
 import pandas as pd
 import os
 from googleapiclient.discovery import build
@@ -23,7 +23,7 @@ def read_feedbacks(db: Session = Depends(get_db)):
 def add_feedback_bulk(feedbacks: list[FeedbackCreate], db: Session = Depends(get_db)):
     # Convert Pydantic objects to dicts
     feedback_dicts = [fb.dict() for fb in feedbacks]
-    created_feedbacks = create_feedback_bulk(db, feedback_dicts)
+    created_feedbacks = create_feedbacks_bulk(db, FeedbackBulkCreate(feedbacks=feedbacks))
     return {"inserted": len(created_feedbacks)}
 
 
