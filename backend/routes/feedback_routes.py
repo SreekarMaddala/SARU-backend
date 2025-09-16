@@ -30,12 +30,18 @@ def add_feedback_bulk(feedbacks: list[FeedbackCreate], db: Session = Depends(get
 @router.post("/feedback/upload_csv")
 async def upload_csv(file: UploadFile = File(...), db: Session = Depends(get_db)):
     df = pd.read_csv(file.file)
+    required_cols = ['company_id', 'channel', 'text']
+    if not set(required_cols).issubset(df.columns):
+        raise HTTPException(status_code=400, detail=f"CSV must contain columns: {', '.join(required_cols)}")
+    if df.empty:
+        raise HTTPException(status_code=400, detail="CSV file is empty")
     feedbacks = []
     for _, row in df.iterrows():
         feedback = FeedbackCreate(company_id=str(row['company_id']), channel=str(row['channel']), text=str(row['text']))
         feedbacks.append(feedback)
     inserted = create_feedbacks_bulk(db, feedbacks)
-    return {"inserted": inserted}
+    # Return count of inserted records
+    return {"inserted": len(inserted)}
 
 @router.post("/feedback/import_google_forms")
 def import_google_forms(sheet_id: str, db: Session = Depends(get_db)):
