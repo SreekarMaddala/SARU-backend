@@ -1,11 +1,11 @@
-from sqlalchemy import Column, Integer, String, DateTime, Text
+from sqlalchemy import Column, Integer, String, DateTime, Text, ForeignKey
 from sqlalchemy.sql import func
 from backend.database import Base
 
 class Feedback(Base):
     __tablename__ = "feedback"
     id = Column(Integer, primary_key=True, index=True)
-    company_id = Column(String, index=True)
+    company_id = Column(Integer, ForeignKey("companies.id"), index=True)
     channel = Column(String)
     text = Column(Text)
     sentiment = Column(String)

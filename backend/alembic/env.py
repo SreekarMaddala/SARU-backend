@@ -1,8 +1,12 @@
 import os
+import sys
 from logging.config import fileConfig
 from sqlalchemy import create_engine, pool
 from alembic import context
 from dotenv import load_dotenv
+
+# Add the backend folder to sys.path to import backend modules
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
 # Load environment variables from .env
 load_dotenv()
@@ -16,7 +20,7 @@ if config.config_file_name is not None:
     fileConfig(config.config_file_name)
 
 # Import your SQLAlchemy Base
-from models.feedback import Base  # Make sure this points to your database.py
+from backend.database import Base  # Make sure this points to your database.py
 target_metadata = Base.metadata
 def run_migrations_offline() -> None:
     """Run migrations in 'offline' mode."""

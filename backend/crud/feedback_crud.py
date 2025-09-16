@@ -3,8 +3,8 @@ from backend.models.feedback import Feedback
 from backend.schemas.feedback_schema import FeedbackCreate
 from typing import List, Union
 
-def get_feedbacks(db: Session):
-    return db.query(Feedback).all()
+def get_feedbacks(db: Session, company_id: int):
+    return db.query(Feedback).filter(Feedback.company_id == company_id).all()
 
 def create_feedback(db: Session, feedback: Union[FeedbackCreate, dict]):
     # Convert dict to FeedbackCreate if needed

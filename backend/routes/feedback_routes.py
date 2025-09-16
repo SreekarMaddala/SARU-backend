@@ -4,6 +4,7 @@ from backend.database import get_db
 from backend.models.feedback import Feedback
 from backend.schemas.feedback_schema import FeedbackCreate, Feedback, FeedbackBulkCreate
 from backend.crud.feedback_crud import get_feedbacks, create_feedback, create_feedbacks_bulk
+from backend.auth import get_current_company
 import pandas as pd
 import os
 from googleapiclient.discovery import build
@@ -15,48 +16,49 @@ import snscrape.modules.twitter as sntwitter  # <- replaced Tweepy
 router = APIRouter()
 
 @router.get("/feedback", response_model=list[Feedback])
-def read_feedbacks(db: Session = Depends(get_db)):
-    feedbacks = get_feedbacks(db)
+def read_feedbacks(db: Session = Depends(get_db), current_company=Depends(get_current_company)):
+    feedbacks = get_feedbacks(db, current_company.id)
     return feedbacks
 
 @router.post("/feedback/bulk")
-def add_feedback_bulk(feedbacks: list[FeedbackCreate], db: Session = Depends(get_db)):
-    # Convert Pydantic objects to dicts
-    feedback_dicts = [fb.dict() for fb in feedbacks]
-    created_feedbacks = create_feedbacks_bulk(db, FeedbackBulkCreate(feedbacks=feedbacks))
+def add_feedback_bulk(feedbacks: list[FeedbackCreate], db: Session = Depends(get_db), current_company=Depends(get_current_company)):
+    # Inject company_id from token
+    for fb in feedbacks:
+        fb.company_id = current_company.id
+    created_feedbacks = create_feedbacks_bulk(db, feedbacks)
     return {"inserted": len(created_feedbacks)}
 
 @router.post("/feedback/upload_csv")
-async def upload_csv(file: UploadFile = File(...), db: Session = Depends(get_db)):
+async def upload_csv(file: UploadFile = File(...), db: Session = Depends(get_db), current_company=Depends(get_current_company)):
     df = pd.read_csv(file.file)
-    required_cols = ['company_id', 'channel', 'text']
+    required_cols = ['channel', 'text']
     if not set(required_cols).issubset(df.columns):
         raise HTTPException(status_code=400, detail=f"CSV must contain columns: {', '.join(required_cols)}")
     if df.empty:
         raise HTTPException(status_code=400, detail="CSV file is empty")
     feedbacks = []
     for _, row in df.iterrows():
-        feedback = FeedbackCreate(company_id=str(row['company_id']), channel=str(row['channel']), text=str(row['text']))
+        feedback = FeedbackCreate(company_id=current_company.id, channel=str(row['channel']), text=str(row['text']))
         feedbacks.append(feedback)
     inserted = create_feedbacks_bulk(db, feedbacks)
     # Return count of inserted records
     return {"inserted": len(inserted)}
 
 @router.post("/feedback/import_google_forms")
-def import_google_forms(sheet_id: str, db: Session = Depends(get_db)):
+def import_google_forms(sheet_id: str, db: Session = Depends(get_db), current_company=Depends(get_current_company)):
     creds = Credentials.from_authorized_user_file('token.json', ['https://www.googleapis.com/auth/spreadsheets.readonly'])
     service = build('sheets', 'v4', credentials=creds)
     result = service.spreadsheets().values().get(spreadsheetId=sheet_id, range='A1:D').execute()
     values = result.get('values', [])
     feedbacks = []
     for row in values[1:]:
-        feedback = FeedbackCreate(company_id=row[0], channel='google_forms', text=row[1])
+        feedback = FeedbackCreate(company_id=current_company.id, channel='google_forms', text=row[1])
         feedbacks.append(feedback)
     inserted = create_feedbacks_bulk(db, feedbacks)
     return {"inserted": inserted}
 
 @router.post("/feedback/import_emails")
-def import_emails(db: Session = Depends(get_db)):
+def import_emails(db: Session = Depends(get_db), current_company=Depends(get_current_company)):
     mail = imaplib.IMAP4_SSL('imap.gmail.com')
     mail.login(os.getenv('GMAIL_USER'), os.getenv('GMAIL_PASS'))
     mail.select('inbox')
@@ -75,14 +77,14 @@ def import_emails(db: Session = Depends(get_db)):
                     break
         else:
             body = msg.get_payload(decode=True).decode()
-        feedback = FeedbackCreate(company_id='default', channel='email', text=f"{subject}: {body}")
+        feedback = FeedbackCreate(company_id=current_company.id, channel='email', text=f"{subject}: {body}")
         feedbacks.append(feedback)
     inserted = create_feedbacks_bulk(db, feedbacks)
     return {"inserted": inserted}
 
 # ------------------- Updated Twitter Import with snscrape -------------------
 @router.post("/feedback/import_twitter")
-def import_twitter(handle: str, db: Session = Depends(get_db)):
+def import_twitter(handle: str, db: Session = Depends(get_db), current_company=Depends(get_current_company)):
     from datetime import datetime, timedelta
     from collections import defaultdict
 
@@ -106,7 +108,7 @@ def import_twitter(handle: str, db: Session = Depends(get_db)):
     # Check last fetch time for this handle to enforce 24-hour restriction
     latest_feedback = db.query(Feedback).filter(
         Feedback.channel == "twitter",
-        Feedback.company_id == "default"
+        Feedback.company_id == current_company.id
     ).order_by(Feedback.created_at.desc()).first()
 
     if latest_feedback:
@@ -129,7 +131,7 @@ def import_twitter(handle: str, db: Session = Depends(get_db)):
             continue
 
         feedback = FeedbackCreate(
-            company_id="default",
+            company_id=current_company.id,
             channel="twitter",
             text=tweet.content
         )
@@ -152,5 +154,6 @@ def import_twitter(handle: str, db: Session = Depends(get_db)):
         }
 
     return {"inserted": len(inserted)}
+
 
 

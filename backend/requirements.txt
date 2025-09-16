@@ -1,12 +1,28 @@
-fastapi==0.104.1
+# FastAPI and server
+fastapi==0.115.0
 uvicorn[standard]==0.24.0
+
+# Database
 sqlalchemy==2.0.23
 alembic==1.12.1
 psycopg2-binary==2.9.9
+
+# Environment and configuration
 python-dotenv==1.0.0
-pydantic==2.7.4
+pydantic==2.9.0
+
+# Data handling
 pandas==2.0.3
+
+# Google Sheets integration
 google-api-python-client==2.97.0
 google-auth-httplib2==0.1.0
 google-auth-oauthlib==1.0.0
+
+# Twitter integration
 tweepy==4.15.0
+snscrape==0.7.0.20230622
+
+# Authentication & security
+python-jose[cryptography]==3.3.0
+passlib[bcrypt]==1.7.4
