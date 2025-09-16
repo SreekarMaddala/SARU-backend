@@ -10,7 +10,7 @@ from googleapiclient.discovery import build
 from google.oauth2.credentials import Credentials
 import imaplib
 import email
-import tweepy
+import snscrape.modules.twitter as sntwitter  # <- replaced Tweepy
 
 router = APIRouter()
 
@@ -25,7 +25,6 @@ def add_feedback_bulk(feedbacks: list[FeedbackCreate], db: Session = Depends(get
     feedback_dicts = [fb.dict() for fb in feedbacks]
     created_feedbacks = create_feedbacks_bulk(db, FeedbackBulkCreate(feedbacks=feedbacks))
     return {"inserted": len(created_feedbacks)}
-
 
 @router.post("/feedback/upload_csv")
 async def upload_csv(file: UploadFile = File(...), db: Session = Depends(get_db)):
@@ -81,14 +80,77 @@ def import_emails(db: Session = Depends(get_db)):
     inserted = create_feedbacks_bulk(db, feedbacks)
     return {"inserted": inserted}
 
+# ------------------- Updated Twitter Import with snscrape -------------------
 @router.post("/feedback/import_twitter")
 def import_twitter(handle: str, db: Session = Depends(get_db)):
-    client = tweepy.Client(bearer_token=os.getenv('TWITTER_BEARER_TOKEN'))
-    user = client.get_user(username=handle)
-    tweets = client.get_users_mentions(id=user.data.id, max_results=10)
+    from datetime import datetime, timedelta
+    from collections import defaultdict
+
     feedbacks = []
-    for tweet in tweets.data:
-        feedback = FeedbackCreate(company_id='default', channel='twitter', text=tweet.text)
+    now = datetime.utcnow()
+    yesterday = now - timedelta(days=1)
+
+    query = f"@{handle} since:{yesterday.date()} until:{now.date()}"
+
+    # Track how many times each user has already been added
+    user_count = defaultdict(int)
+
+    # Function to check for duplicates in the last 24 hours
+    def is_recent_duplicate(db: Session, text: str):
+        existing = db.query(Feedback).filter(
+            Feedback.text == text,
+            Feedback.created_at >= yesterday
+        ).first()
+        return existing is not None
+
+    # Check last fetch time for this handle to enforce 24-hour restriction
+    latest_feedback = db.query(Feedback).filter(
+        Feedback.channel == "twitter",
+        Feedback.company_id == "default"
+    ).order_by(Feedback.created_at.desc()).first()
+
+    if latest_feedback:
+        next_available_time = latest_feedback.created_at + timedelta(hours=24)
+        if now < next_available_time:
+            return {
+                "inserted": 0,
+                "message": f"You can fetch tweets again after {next_available_time.strftime('%Y-%m-%d %H:%M:%S')} UTC"
+            }
+
+    for i, tweet in enumerate(sntwitter.TwitterSearchScraper(query).get_items()):
+        username = tweet.user.username
+
+        # Skip if tweet is duplicate
+        if is_recent_duplicate(db, tweet.content):
+            continue
+
+        # Skip if user already has 3 mentions in last 24 hours
+        if user_count[username] >= 3:
+            continue
+
+        feedback = FeedbackCreate(
+            company_id="default",
+            channel="twitter",
+            text=tweet.content
+        )
         feedbacks.append(feedback)
+
+        # Increment user mention count
+        user_count[username] += 1
+
+        # Optional: limit total tweets per request
+        # if i >= 1000:
+        #     break
+
     inserted = create_feedbacks_bulk(db, feedbacks)
-    return {"inserted": inserted}
+
+    # If no new tweets were inserted, return a message
+    if not feedbacks:
+        return {
+            "inserted": 0,
+            "message": "No new tweets available after applying 24-hour and per-user limits."
+        }
+
+    return {"inserted": len(inserted)}
+
+
