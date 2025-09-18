@@ -21,7 +21,7 @@ google-auth-oauthlib==1.0.0
 
 # Twitter integration
 tweepy==4.15.0
-snscrape==0.7.0.20230622
+snscrape
 
 # Authentication & security
 python-jose[cryptography]==3.3.0
