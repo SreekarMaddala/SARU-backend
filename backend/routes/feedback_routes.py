@@ -82,34 +82,37 @@ def import_emails(db: Session = Depends(get_db), current_company=Depends(get_cur
     inserted = create_feedbacks_bulk(db, feedbacks)
     return {"inserted": inserted}
 
-# ------------------- Updated Twitter Import with snscrape -------------------
 @router.post("/feedback/import_twitter")
-def import_twitter(handle: str, db: Session = Depends(get_db), current_company=Depends(get_current_company)):
+def import_twitter(
+    handle: str,
+    db: Session = Depends(get_db),
+    current_company=Depends(get_current_company)
+):
     from datetime import datetime, timedelta
     from collections import defaultdict
+    import snscrape.modules.twitter as sntwitter
+    from backend.models.feedback import Feedback as FeedbackModel  # SQLAlchemy model
 
     feedbacks = []
     now = datetime.utcnow()
     yesterday = now - timedelta(days=1)
 
-    query = f"@{handle} since:{yesterday.date()} until:{now.date()}"
+    # Inclusive "until" → add +1 day
+    query = f"@{handle} since:{yesterday.date()} until:{(now + timedelta(days=1)).date()}"
 
-    # Track how many times each user has already been added
     user_count = defaultdict(int)
 
-    # Function to check for duplicates in the last 24 hours
-    def is_recent_duplicate(db: Session, text: str):
-        existing = db.query(Feedback).filter(
-            Feedback.text == text,
-            Feedback.created_at >= yesterday
-        ).first()
-        return existing is not None
+    def is_recent_duplicate(text: str) -> bool:
+        return db.query(FeedbackModel).filter(
+            FeedbackModel.text == text,
+            FeedbackModel.created_at >= yesterday
+        ).first() is not None
 
-    # Check last fetch time for this handle to enforce 24-hour restriction
-    latest_feedback = db.query(Feedback).filter(
-        Feedback.channel == "twitter",
-        Feedback.company_id == current_company.id
-    ).order_by(Feedback.created_at.desc()).first()
+    # Enforce 24h gap between fetches for this company
+    latest_feedback = db.query(FeedbackModel).filter(
+        FeedbackModel.channel == "twitter",
+        FeedbackModel.company_id == current_company.id
+    ).order_by(FeedbackModel.created_at.desc()).first()
 
     if latest_feedback:
         next_available_time = latest_feedback.created_at + timedelta(hours=24)
@@ -122,38 +125,32 @@ def import_twitter(handle: str, db: Session = Depends(get_db), current_company=D
     for i, tweet in enumerate(sntwitter.TwitterSearchScraper(query).get_items()):
         username = tweet.user.username
 
-        # Skip if tweet is duplicate
-        if is_recent_duplicate(db, tweet.content):
+        # Skip duplicates and limit per-user mentions
+        if is_recent_duplicate(tweet.content):
             continue
-
-        # Skip if user already has 3 mentions in last 24 hours
         if user_count[username] >= 3:
             continue
 
-        feedback = FeedbackCreate(
+        # ✅ Build SQLAlchemy Feedback model with all fields
+        feedback = FeedbackModel(
             company_id=current_company.id,
             channel="twitter",
-            text=tweet.content
+            text=tweet.content,
+            user_ref=username,               # twitter handle
+            likes=getattr(tweet, "likeCount", 0),  # safe fallback
+            created_at=now
         )
         feedbacks.append(feedback)
-
-        # Increment user mention count
         user_count[username] += 1
 
-        # Optional: limit total tweets per request
-        # if i >= 1000:
-        #     break
-
-    inserted = create_feedbacks_bulk(db, feedbacks)
-
-    # If no new tweets were inserted, return a message
     if not feedbacks:
         return {
             "inserted": 0,
-            "message": "No new tweets available after applying 24-hour and per-user limits."
+            "message": "No new tweets available after applying limits."
         }
 
-    return {"inserted": len(inserted)}
+    # ✅ Bulk insert raw Feedback models
+    db.add_all(feedbacks)
+    db.commit()
 
-
-
+    return {"inserted": len(feedbacks)}

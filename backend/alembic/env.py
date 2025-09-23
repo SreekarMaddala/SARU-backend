@@ -7,6 +7,8 @@ from dotenv import load_dotenv
 
 # Add the backend folder to sys.path to import backend modules
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+# Add the project root to sys.path to import backend package
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..')))
 
 # Load environment variables from .env
 load_dotenv()
