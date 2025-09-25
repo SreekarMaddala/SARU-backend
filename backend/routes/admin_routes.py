@@ -14,7 +14,7 @@ from jose import JWTError, jwt
 router = APIRouter(prefix="/admin", tags=["admin"])
 
 # Admin credentials (hardcoded)
-ADMIN_EMAIL = "admin@saru.com"
+ADMIN_EMAIL = "admin@gmail.com"
 ADMIN_PASSWORD = "sreekar"
 
 # JWT settings (from auth.py)
