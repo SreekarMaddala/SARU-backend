@@ -24,6 +24,13 @@ def authenticate_company(db: Session, email: str, password: str):
     company = get_company_by_email(db, email)
     if not company:
         return False
-    if not pwd_context.verify(password, company.password_hash):
+    # Support both hashed and legacy plain-text password
+    if company.password_hash:
+        if not pwd_context.verify(password, company.password_hash):
+            return False
+    elif company.password is not None:
+        if password != company.password:
+            return False
+    else:
         return False
     return company
