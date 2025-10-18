@@ -15,3 +15,18 @@
 - [x] Run alembic migration: alembic revision --autogenerate -m "Add Company model and update Feedback"
 - [x] Update main.py: Include company_router
 - [x] Test: Register company, login, access protected routes
+
+# TODO: Implement Feedback Enrichment
+
+## Steps to Complete
+
+- [x] Update requirements.txt: Add textblob for sentiment analysis
+- [x] Create User model: backend/models/user.py with id, email_or_mobile, name, created_at
+- [x] Update Feedback model: Change user_id to ForeignKey to User.id
+- [x] Update feedback schemas: Add name to FeedbackCreate input
+- [x] Modify feedback_crud.py: Add enrichment function to analyze text, extract topics, handle user lookup/create
+- [x] Update backend/models/__init__.py: Import new User model
+- [ ] Run alembic migration: alembic revision --autogenerate -m "Add User model and update Feedback for enrichment"
+- [ ] Update routes if needed to pass name in input
+- [x] Install new dependencies
+- [x] Test enrichment with sample data

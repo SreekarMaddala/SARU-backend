@@ -9,8 +9,8 @@ class Feedback(Base):
     text = Column(Text, nullable=False)                    # feedback content
     sentiment = Column(String, nullable=True)              # positive / negative / neutral
     topics = Column(String, nullable=True)                 # tags or categories
-    user_id = Column(String, nullable=True)                # user identifier (Twitter ID / internal ID)
-    name = Column(String(100), nullable=True)              # name of user
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=True)  # user identifier
+    name = Column(String(100), nullable=True)              # name of user (from user table or input)
     email_or_mobile = Column(String(100), nullable=True)   # email or mobile
     sentiment_score = Column(Float, nullable=True)         # numeric sentiment value
     created_at = Column(DateTime(timezone=True), server_default=func.now())

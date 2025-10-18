@@ -9,7 +9,7 @@ class FeedbackBase(BaseModel):
     text: str
     sentiment: Optional[str] = None
     topics: Optional[str] = None
-    user_id: Optional[str] = None
+    user_id: Optional[int] = None
     name: Optional[str] = None
     email_or_mobile: Optional[str] = None
     sentiment_score: Optional[float] = None
