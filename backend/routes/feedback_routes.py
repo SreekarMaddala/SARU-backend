@@ -62,7 +62,13 @@ def import_google_forms(sheet_id: str, db: Session = Depends(get_db), current_co
         name = row[0] if len(row) > 0 else "Anonymous"
         text = row[1] if len(row) > 1 else ""
         email_or_mobile = row[2] if len(row) > 2 else "unknown@google.com"
-        feedback = FeedbackCreate(company_id=current_company.id, channel='google_forms', text=text, name=name, email_or_mobile=email_or_mobile)
+        feedback = FeedbackCreate(
+            company_id=current_company.id,
+            channel='google_forms',
+            text=text,
+            name=name,
+            email_or_mobile=email_or_mobile,
+        )
         feedbacks.append(feedback)
     inserted = create_feedbacks_bulk(db, feedbacks)
     return {"inserted": len(inserted)}
@@ -91,7 +97,13 @@ def import_emails(db: Session = Depends(get_db), current_company=Depends(get_cur
         sender = msg['from']
         name = subject if subject else "Email User"
         email_or_mobile = sender if sender else "unknown@email.com"
-        feedback = FeedbackCreate(company_id=current_company.id, channel='email', text=f"{subject}: {body}", name=name, email_or_mobile=email_or_mobile)
+        feedback = FeedbackCreate(
+            company_id=current_company.id,
+            channel='email',
+            text=f"{subject}: {body}",
+            name=name,
+            email_or_mobile=email_or_mobile,
+        )
         feedbacks.append(feedback)
     inserted = create_feedbacks_bulk(db, feedbacks)
     return {"inserted": len(inserted)}
@@ -145,16 +157,15 @@ def import_twitter(
         if user_count[username] >= 3:
             continue
 
-        # ✅ Build SQLAlchemy Feedback model with all fields
+        # ✅ Build SQLAlchemy Feedback model with correct fields
         feedback = FeedbackModel(
             company_id=current_company.id,
             channel="twitter",
             text=tweet.content,
-            user_ref=username,               # twitter handle
-            likes=getattr(tweet, "likeCount", 0),  # safe fallback
-            name=username,                   # use username as name
-            email_or_mobile=f"@{username}",  # use handle as email_or_mobile placeholder
-            created_at=now
+            likes=getattr(tweet, "likeCount", 0),
+            name=username,
+            email_or_mobile=f"@{username}",
+            created_at=now,
         )
         feedbacks.append(feedback)
         user_count[username] += 1

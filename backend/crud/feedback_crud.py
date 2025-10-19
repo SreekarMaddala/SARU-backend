@@ -31,7 +31,7 @@ def enrich_feedback_data(text: str) -> dict:
         "topics": topics
     }
 
-def get_or_create_user(db: Session, email_or_mobile: str, name: str = None) -> int:
+def get_or_create_user(db: Session, email_or_mobile: str, name: str = None) -> str:
     """
     Get existing user or create new one.
     """
@@ -40,13 +40,13 @@ def get_or_create_user(db: Session, email_or_mobile: str, name: str = None) -> i
         if name and not user.name:
             user.name = name
             db.commit()
-        return user.id
+        return user.email_or_mobile
     else:
         new_user = User(email_or_mobile=email_or_mobile, name=name)
         db.add(new_user)
         db.commit()
         db.refresh(new_user)
-        return new_user.id
+        return new_user.email_or_mobile
 
 def create_feedback(db: Session, feedback: Union[FeedbackCreate, dict]):
     # Convert dict to FeedbackCreate if needed
@@ -60,10 +60,7 @@ def create_feedback(db: Session, feedback: Union[FeedbackCreate, dict]):
     feedback.topics = enriched["topics"]
 
     # Handle user
-    if feedback.email_or_mobile:
-        feedback.user_id = get_or_create_user(db, feedback.email_or_mobile, feedback.name)
-    else:
-        feedback.user_id = None
+    feedback.email_or_mobile = get_or_create_user(db, feedback.email_or_mobile, feedback.name)
 
     db_feedback = Feedback(**feedback.dict())
     db.add(db_feedback)
@@ -83,7 +80,7 @@ def create_feedbacks_bulk(db: Session, feedbacks: List[Union[FeedbackCreate, dic
         feedback.topics = enriched["topics"]
 
         # Handle user - always create or link user since name and email_or_mobile are now required
-        feedback.user_id = get_or_create_user(db, feedback.email_or_mobile, feedback.name)
+        feedback.email_or_mobile = get_or_create_user(db, feedback.email_or_mobile, feedback.name)
 
         db_feedbacks.append(Feedback(**feedback.dict()))
     db.add_all(db_feedbacks)
