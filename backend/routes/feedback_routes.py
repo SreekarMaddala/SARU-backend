@@ -43,7 +43,8 @@ async def upload_csv(file: UploadFile = File(...), db: Session = Depends(get_db)
             channel=str(row['channel']),
             text=str(row['text']),
             name=str(row['name']),
-            email_or_mobile=str(row['email_or_mobile'])
+            email_or_mobile=str(row['email_or_mobile']),
+            product_id=int(row['product_id']) if 'product_id' in df.columns and pd.notna(row['product_id']) else None,
         )
         feedbacks.append(feedback)
     inserted = create_feedbacks_bulk(db, feedbacks)
@@ -68,6 +69,7 @@ def import_google_forms(sheet_id: str, db: Session = Depends(get_db), current_co
             text=text,
             name=name,
             email_or_mobile=email_or_mobile,
+            product_id=None,
         )
         feedbacks.append(feedback)
     inserted = create_feedbacks_bulk(db, feedbacks)
@@ -103,6 +105,7 @@ def import_emails(db: Session = Depends(get_db), current_company=Depends(get_cur
             text=f"{subject}: {body}",
             name=name,
             email_or_mobile=email_or_mobile,
+            product_id=None,
         )
         feedbacks.append(feedback)
     inserted = create_feedbacks_bulk(db, feedbacks)
@@ -165,6 +168,7 @@ def import_twitter(
             likes=getattr(tweet, "likeCount", 0),
             name=username,
             email_or_mobile=f"@{username}",
+            product_id=None,
             created_at=now,
         )
         feedbacks.append(feedback)

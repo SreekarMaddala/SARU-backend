@@ -5,6 +5,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from .database import Base, engine
 from .routes.feedback_routes import router as feedback_router
 from .routes.company_routes import router as company_router
+from .routes.product_routes import router as product_router
 from .routes.admin_routes import router as admin_router
 from .models.company import Company  # import your models
 
@@ -30,6 +31,7 @@ Base.metadata.create_all(bind=engine)
 app.include_router(feedback_router)
 app.include_router(company_router)
 app.include_router(admin_router)
+app.include_router(product_router)
 
 @app.get("/")
 def read_root():

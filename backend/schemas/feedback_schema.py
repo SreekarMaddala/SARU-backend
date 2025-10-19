@@ -17,11 +17,13 @@ class FeedbackBase(BaseModel):
 
 class FeedbackCreate(FeedbackBase):
     company_id: int
+    product_id: int | None = None
 
 
 class Feedback(FeedbackBase):
     id: int
     company_id: int
+    product_id: int | None = None
     created_at: datetime
 
     class Config:

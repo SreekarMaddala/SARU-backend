@@ -5,6 +5,7 @@ class Feedback(Base):
     __tablename__ = "feedback"
     id = Column(Integer, primary_key=True, index=True)
     company_id = Column(Integer, ForeignKey("companies.id"), index=True)
+    product_id = Column(Integer, ForeignKey("products.id"), nullable=True, index=True)
     channel = Column(String, nullable=False)               # e.g., twitter, email, phone
     text = Column(Text, nullable=False)                    # feedback content
     sentiment = Column(String, nullable=True)              # positive / negative / neutral
