@@ -6,8 +6,8 @@ from .database import Base, engine
 from .routes.feedback_routes import router as feedback_router
 from .routes.company_routes import router as company_router
 from .routes.product_routes import router as product_router
-from .routes.admin_routes import router as admin_router
 from .routes.user_routes import router as user_router
+from .routes.admin_routes import router as admin_router
 from .models.company import Company  # import your models
 
 app = FastAPI()
