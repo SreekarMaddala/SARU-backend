@@ -31,14 +31,20 @@ def add_feedback_bulk(feedbacks: list[FeedbackCreate], db: Session = Depends(get
 @router.post("/feedback/upload_csv")
 async def upload_csv(file: UploadFile = File(...), db: Session = Depends(get_db), current_company=Depends(get_current_company)):
     df = pd.read_csv(file.file)
-    required_cols = ['channel', 'text']
+    required_cols = ['channel', 'text', 'name', 'email_or_mobile']
     if not set(required_cols).issubset(df.columns):
         raise HTTPException(status_code=400, detail=f"CSV must contain columns: {', '.join(required_cols)}")
     if df.empty:
         raise HTTPException(status_code=400, detail="CSV file is empty")
     feedbacks = []
     for _, row in df.iterrows():
-        feedback = FeedbackCreate(company_id=current_company.id, channel=str(row['channel']), text=str(row['text']))
+        feedback = FeedbackCreate(
+            company_id=current_company.id,
+            channel=str(row['channel']),
+            text=str(row['text']),
+            name=str(row['name']),
+            email_or_mobile=str(row['email_or_mobile'])
+        )
         feedbacks.append(feedback)
     inserted = create_feedbacks_bulk(db, feedbacks)
     # Return count of inserted records
@@ -52,10 +58,14 @@ def import_google_forms(sheet_id: str, db: Session = Depends(get_db), current_co
     values = result.get('values', [])
     feedbacks = []
     for row in values[1:]:
-        feedback = FeedbackCreate(company_id=current_company.id, channel='google_forms', text=row[1])
+        # Assume row[0] is name, row[1] is text, row[2] is email_or_mobile, etc.
+        name = row[0] if len(row) > 0 else "Anonymous"
+        text = row[1] if len(row) > 1 else ""
+        email_or_mobile = row[2] if len(row) > 2 else "unknown@google.com"
+        feedback = FeedbackCreate(company_id=current_company.id, channel='google_forms', text=text, name=name, email_or_mobile=email_or_mobile)
         feedbacks.append(feedback)
     inserted = create_feedbacks_bulk(db, feedbacks)
-    return {"inserted": inserted}
+    return {"inserted": len(inserted)}
 
 @router.post("/feedback/import_emails")
 def import_emails(db: Session = Depends(get_db), current_company=Depends(get_current_company)):
@@ -77,10 +87,14 @@ def import_emails(db: Session = Depends(get_db), current_company=Depends(get_cur
                     break
         else:
             body = msg.get_payload(decode=True).decode()
-        feedback = FeedbackCreate(company_id=current_company.id, channel='email', text=f"{subject}: {body}")
+        # Extract sender email as email_or_mobile, use subject as name or default
+        sender = msg['from']
+        name = subject if subject else "Email User"
+        email_or_mobile = sender if sender else "unknown@email.com"
+        feedback = FeedbackCreate(company_id=current_company.id, channel='email', text=f"{subject}: {body}", name=name, email_or_mobile=email_or_mobile)
         feedbacks.append(feedback)
     inserted = create_feedbacks_bulk(db, feedbacks)
-    return {"inserted": inserted}
+    return {"inserted": len(inserted)}
 
 @router.post("/feedback/import_twitter")
 def import_twitter(
@@ -138,6 +152,8 @@ def import_twitter(
             text=tweet.content,
             user_ref=username,               # twitter handle
             likes=getattr(tweet, "likeCount", 0),  # safe fallback
+            name=username,                   # use username as name
+            email_or_mobile=f"@{username}",  # use handle as email_or_mobile placeholder
             created_at=now
         )
         feedbacks.append(feedback)

@@ -82,11 +82,8 @@ def create_feedbacks_bulk(db: Session, feedbacks: List[Union[FeedbackCreate, dic
         feedback.sentiment_score = enriched["sentiment_score"]
         feedback.topics = enriched["topics"]
 
-        # Handle user
-        if feedback.email_or_mobile:
-            feedback.user_id = get_or_create_user(db, feedback.email_or_mobile, feedback.name)
-        else:
-            feedback.user_id = None
+        # Handle user - always create or link user since name and email_or_mobile are now required
+        feedback.user_id = get_or_create_user(db, feedback.email_or_mobile, feedback.name)
 
         db_feedbacks.append(Feedback(**feedback.dict()))
     db.add_all(db_feedbacks)
