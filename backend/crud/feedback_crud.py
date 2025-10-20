@@ -31,18 +31,27 @@ def enrich_feedback_data(text: str) -> dict:
         "topics": topics
     }
 
-def get_or_create_user(db: Session, email_or_mobile: str, name: str = None) -> str:
+def get_or_create_user(db: Session, email_or_mobile: str, name: str = None, company_id: int = None) -> str:
     """
-    Get existing user or create new one.
+    Get existing user or create new one with company association.
     """
     user = db.query(User).filter(User.email_or_mobile == email_or_mobile).first()
     if user:
-        if name and not user.name:
+        # Update company_id if not set and company_id is provided
+        if not user.company_id and company_id:
+            user.company_id = company_id
+            db.commit()
+        # Update name if not set and name is provided
+        if not user.name and name:
             user.name = name
             db.commit()
         return user.email_or_mobile
     else:
-        new_user = User(email_or_mobile=email_or_mobile, name=name)
+        new_user = User(
+            email_or_mobile=email_or_mobile, 
+            name=name,
+            company_id=company_id
+        )
         db.add(new_user)
         db.commit()
         db.refresh(new_user)
@@ -60,7 +69,7 @@ def create_feedback(db: Session, feedback: Union[FeedbackCreate, dict]):
     feedback.topics = enriched["topics"]
 
     # Handle user
-    feedback.email_or_mobile = get_or_create_user(db, feedback.email_or_mobile, feedback.name)
+    feedback.email_or_mobile = get_or_create_user(db, feedback.email_or_mobile, feedback.name, feedback.company_id)
 
     db_feedback = Feedback(**feedback.dict())
     db.add(db_feedback)
@@ -80,7 +89,7 @@ def create_feedbacks_bulk(db: Session, feedbacks: List[Union[FeedbackCreate, dic
         feedback.topics = enriched["topics"]
 
         # Handle user - always create or link user since name and email_or_mobile are now required
-        feedback.email_or_mobile = get_or_create_user(db, feedback.email_or_mobile, feedback.name)
+        feedback.email_or_mobile = get_or_create_user(db, feedback.email_or_mobile, feedback.name, feedback.company_id)
 
         db_feedbacks.append(Feedback(**feedback.dict()))
     db.add_all(db_feedbacks)
