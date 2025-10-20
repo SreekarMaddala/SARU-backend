@@ -9,7 +9,7 @@ router = APIRouter(prefix="/products", tags=["products"])
 
 @router.get("/", response_model=list[dict])
 def list_products(db: Session = Depends(get_db), current_company=Depends(get_current_company)):
-    products = db.query(Product).all()
+    products = db.query(Product).filter(Product.company_id == current_company.id).all()
     return [{"id": p.id, "name": p.name, "description": p.description} for p in products]
 
 
@@ -19,7 +19,7 @@ def create_product(payload: dict, db: Session = Depends(get_db), current_company
     description = payload.get("description")
     if not name:
         raise HTTPException(status_code=400, detail="name is required")
-    product = Product(name=name, description=description)
+    product = Product(name=name, description=description, company_id=current_company.id)
     db.add(product)
     db.commit()
     db.refresh(product)

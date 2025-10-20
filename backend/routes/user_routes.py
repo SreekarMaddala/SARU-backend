@@ -9,7 +9,7 @@ router = APIRouter(prefix="/users", tags=["users"])
 
 @router.get("/", response_model=list[dict])
 def list_users(db: Session = Depends(get_db), current_company=Depends(get_current_company)):
-    users = db.query(User).all()
+    users = db.query(User).filter(User.company_id == current_company.id).all()
     return [
         {
             "id": user.email_or_mobile,  # Use email_or_mobile as ID since it's the primary key
