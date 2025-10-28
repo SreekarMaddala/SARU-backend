@@ -29,3 +29,4 @@ passlib[bcrypt]==1.7.4
 
 # NLP for sentiment and topics
 textblob==0.17.1
+scikit-learn==1.3.0
