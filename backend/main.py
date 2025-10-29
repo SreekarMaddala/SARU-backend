@@ -9,6 +9,9 @@ from .routes.product_routes import router as product_router
 from .routes.user_routes import router as user_router
 from .routes.admin_routes import router as admin_router
 from .routes.analytics_routes import router as analytics_router
+from .routes.sentiment_routes import router as sentiment_router
+from .routes.topic_routes import router as topic_router
+from .routes.channel_routes import router as channel_router
 from .models.company import Company  # import your models
 
 app = FastAPI()
@@ -36,6 +39,9 @@ app.include_router(admin_router)
 app.include_router(product_router)
 app.include_router(user_router)
 app.include_router(analytics_router)
+app.include_router(sentiment_router)
+app.include_router(topic_router)
+app.include_router(channel_router)
 
 @app.get("/")
 def read_root():

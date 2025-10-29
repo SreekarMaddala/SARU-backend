@@ -36,46 +36,7 @@ def get_feedback_df(db: Session, company_id: int):
     } for f in feedbacks]
     return pd.DataFrame(data)
 
-# 1. Sentiment Analysis
-@router.get("/analytics/sentiment")
-def sentiment_analysis(db: Session = Depends(get_db), current_company=Depends(get_current_company)):
-    df = get_feedback_df(db, current_company.id)
-    if df.empty:
-        return {"message": "No feedback data available"}
-    sentiments = []
-    for text in df['text']:
-        blob = TextBlob(text)
-        polarity = blob.sentiment.polarity
-        sentiment = 'positive' if polarity > 0 else 'negative' if polarity < 0 else 'neutral'
-        sentiments.append({'text': text, 'sentiment': sentiment, 'score': polarity})
-    return {"sentiments": sentiments}
 
-# 2. Topic Modeling (using LDA on text)
-@router.get("/analytics/topics")
-def topic_modeling(db: Session = Depends(get_db), current_company=Depends(get_current_company)):
-    df = get_feedback_df(db, current_company.id)
-    if df.empty:
-        return {"message": "No feedback data available"}
-    texts = df['text'].tolist()
-    vectorizer = CountVectorizer(stop_words='english')
-    X = vectorizer.fit_transform(texts)
-    lda = LatentDirichletAllocation(n_components=5, random_state=42)
-    lda.fit(X)
-    topics = []
-    for idx, topic in enumerate(lda.components_):
-        top_words = [vectorizer.get_feature_names_out()[i] for i in topic.argsort()[-10:]]
-        topics.append({"topic_id": idx, "top_words": top_words})
-    return {"topics": topics}
-
-# 3. Channel Analysis
-@router.get("/analytics/channels")
-def channel_analysis(db: Session = Depends(get_db), current_company=Depends(get_current_company)):
-    df = get_feedback_df(db, current_company.id)
-    if df.empty:
-        return {"message": "No feedback data available"}
-    channel_counts = df['channel'].value_counts().to_dict()
-    avg_sentiment = df.groupby('channel')['sentiment_score'].mean().to_dict()
-    return {"channel_counts": channel_counts, "avg_sentiment_per_channel": avg_sentiment}
 
 # 4. User Behavior Analysis
 @router.get("/analytics/users")
