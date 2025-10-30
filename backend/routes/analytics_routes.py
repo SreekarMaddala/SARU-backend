@@ -43,21 +43,30 @@ def get_feedback_df(db: Session, company_id: int):
 def user_behavior_analysis(db: Session = Depends(get_db), current_company=Depends(get_current_company)):
     df = get_feedback_df(db, current_company.id)
     if df.empty:
-        return {"message": "No feedback data available"}
+        return []
     user_freq = df['email_or_mobile'].value_counts().to_dict()
     user_sentiment = df.groupby('email_or_mobile')['sentiment_score'].mean().to_dict()
-    return {"user_feedback_frequency": user_freq, "user_avg_sentiment": user_sentiment}
+    data = []
+    for user in user_freq:
+        data.append({
+            'user_id': user,
+            'feedback_count': user_freq[user],
+            'avg_sentiment': user_sentiment.get(user, 0)
+        })
+    return data
 
 # 5. Company Performance Analysis (assuming multiple companies, but per company)
-@router.get("/company_performance")
+@router.get("/company-performance")
 def company_performance_analysis(db: Session = Depends(get_db), current_company=Depends(get_current_company)):
     df = get_feedback_df(db, current_company.id)
     if df.empty:
-        return {"message": "No feedback data available"}
+        return {"total_feedback": 0, "avg_sentiment": 0, "total_topics": 0, "unique_users": 0, "topic_counts": {}}
     total_feedback = len(df)
     avg_sentiment = df['sentiment_score'].mean()
     topic_counts = Counter([t for topics in df['topics'].dropna() for t in topics.split(',')])
-    return {"total_feedback": total_feedback, "avg_sentiment": avg_sentiment, "topic_counts": dict(topic_counts)}
+    total_topics = len(topic_counts)
+    unique_users = df['email_or_mobile'].nunique()
+    return {"total_feedback": total_feedback, "avg_sentiment": avg_sentiment, "total_topics": total_topics, "unique_users": unique_users, "topic_counts": dict(topic_counts)}
 
 # 6. Product Feedback Analysis
 @router.get("/products")
@@ -77,8 +86,15 @@ def product_feedback_analysis(db: Session = Depends(get_db), current_company=Dep
 def temporal_analysis(db: Session = Depends(get_db), current_company=Depends(get_current_company)):
     df = get_feedback_df(db, current_company.id)
     if df.empty:
-        return {"message": "No feedback data available"}
+        return []
     df['date'] = pd.to_datetime(df['created_at']).dt.date
     daily_counts = df.groupby('date').size().to_dict()
     daily_sentiment = df.groupby('date')['sentiment_score'].mean().to_dict()
-    return {"daily_feedback_counts": daily_counts, "daily_avg_sentiment": daily_sentiment}
+    data = []
+    for date in daily_counts:
+        data.append({
+            'date': str(date),
+            'feedback_count': daily_counts[date],
+            'avg_sentiment': daily_sentiment.get(date, 0)
+        })
+    return data
