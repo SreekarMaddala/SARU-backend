@@ -79,11 +79,11 @@ def product_feedback_analysis_service(db: Session, company_id: int):
     df = get_feedback_df(db, company_id)
     if df.empty:
         return {"message": "No feedback data available"}
-    product_df = df.dropna(subset=['product_id'])
+    product_df = df.dropna(subset=['product_model_number'])
     if product_df.empty:
         return {"message": "No product-specific feedback"}
-    product_sentiment = product_df.groupby('product_id')['sentiment_score'].mean().to_dict()
-    product_counts = product_df['product_id'].value_counts().to_dict()
+    product_sentiment = product_df.groupby('product_model_number')['sentiment_score'].mean().to_dict()
+    product_counts = product_df['product_model_number'].value_counts().to_dict()
     return {"product_avg_sentiment": product_sentiment, "product_feedback_counts": product_counts}
 
 

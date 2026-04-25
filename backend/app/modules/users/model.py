@@ -5,7 +5,9 @@ from backend.app.db.base import Base
 
 class User(Base):
     __tablename__ = "users"
-    email_or_mobile = Column(String(100), primary_key=True, index=True)
+    id = Column(Integer, primary_key=True, index=True)
+    email = Column(String(255), nullable=True, index=True)
+    mobile = Column(String(50), nullable=True, index=True)
     name = Column(String(100), nullable=True)
     company_id = Column(Integer, ForeignKey('companies.id'), nullable=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now())

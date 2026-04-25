@@ -3,7 +3,7 @@ from sqlalchemy.orm import Session
 from backend.app.db.session import get_db
 from backend.app.modules.products.model import Product
 from backend.app.modules.products.schema import ProductCreate, ProductRead, ProductUpdate
-from backend.app.modules.products.service import get_products_by_company, create_product, get_product_by_id
+from backend.app.modules.products.service import get_products_by_company, create_product, get_product_by_company_and_model
 from backend.app.core.security import get_current_company
 
 router = APIRouter(prefix="/products", tags=["products"])
@@ -23,9 +23,9 @@ def create_product_route(payload: ProductCreate, db: Session = Depends(get_db), 
     return product
 
 
-@router.put("/{product_id}", response_model=ProductRead)
-def update_product(product_id: int, payload: ProductUpdate, db: Session = Depends(get_db), current_company=Depends(get_current_company)):
-    product = get_product_by_id(db, product_id, current_company.id)
+@router.put("/{model_number}", response_model=ProductRead)
+def update_product(model_number: str, payload: ProductUpdate, db: Session = Depends(get_db), current_company=Depends(get_current_company)):
+    product = get_product_by_company_and_model(db, current_company.id, model_number)
     if not product:
         raise HTTPException(status_code=404, detail="Product not found")
 
@@ -41,9 +41,9 @@ def update_product(product_id: int, payload: ProductUpdate, db: Session = Depend
     return product
 
 
-@router.delete("/{product_id}")
-def delete_product(product_id: int, db: Session = Depends(get_db), current_company=Depends(get_current_company)):
-    product = get_product_by_id(db, product_id, current_company.id)
+@router.delete("/{model_number}")
+def delete_product(model_number: str, db: Session = Depends(get_db), current_company=Depends(get_current_company)):
+    product = get_product_by_company_and_model(db, current_company.id, model_number)
     if not product:
         raise HTTPException(status_code=404, detail="Product not found")
 

@@ -6,7 +6,8 @@ class ProductBase(BaseModel):
     model_config = ConfigDict(protected_namespaces=())
     name: str
     description: Optional[str] = None
-    model_number: Optional[str] = None
+    model_number: str
+    company_id: int
 
 
 class ProductCreate(ProductBase):
@@ -14,9 +15,6 @@ class ProductCreate(ProductBase):
 
 
 class ProductRead(ProductBase):
-    id: int
-    company_id: Optional[int] = None
-
     class Config:
         from_attributes = True
 

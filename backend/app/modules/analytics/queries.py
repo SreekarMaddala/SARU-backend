@@ -8,7 +8,7 @@ def get_feedback_df(db: Session, company_id: int) -> pd.DataFrame:
     data = [{
         'id': f.id,
         'company_id': f.company_id,
-        'product_id': f.product_id,
+        'product_model_number': f.product_model_number,
         'channel': f.channel,
         'text': f.text,
         'sentiment': f.sentiment,

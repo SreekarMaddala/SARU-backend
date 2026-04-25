@@ -1,7 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException, UploadFile, File
 from sqlalchemy.orm import Session
 from backend.app.db.session import get_db
-from backend.app.modules.feedback.model import Feedback
 from backend.app.modules.feedback.schema import FeedbackCreate, FeedbackRead, FeedbackBulkCreate
 from backend.app.modules.feedback.service import get_feedbacks, create_feedback, create_feedbacks_bulk
 from backend.app.core.security import get_current_company
@@ -11,6 +10,7 @@ from googleapiclient.discovery import build
 from google.oauth2.credentials import Credentials
 import imaplib
 import email
+from backend.app.modules.products.model import Product
 
 router = APIRouter(prefix="/feedback", tags=["feedback"])
 
@@ -32,24 +32,46 @@ def add_feedback_bulk(feedbacks: list[FeedbackCreate], db: Session = Depends(get
 @router.post("/upload_csv")
 async def upload_csv(file: UploadFile = File(...), db: Session = Depends(get_db), current_company=Depends(get_current_company)):
     df = pd.read_csv(file.file)
-    required_cols = ['channel', 'text', 'name', 'email_or_mobile']
+    required_cols = ['channel', 'text']
     if not set(required_cols).issubset(df.columns):
         raise HTTPException(status_code=400, detail=f"CSV must contain columns: {', '.join(required_cols)}")
     if df.empty:
         raise HTTPException(status_code=400, detail="CSV file is empty")
+
+    # At least one of email/mobile must exist per row.
+    if "email" not in df.columns and "mobile" not in df.columns:
+        raise HTTPException(status_code=400, detail="CSV must contain at least one of: email, mobile")
+
     feedbacks = []
+    rejected = 0
     for _, row in df.iterrows():
+        email_val = str(row['email']).strip() if 'email' in df.columns and pd.notna(row['email']) else None
+        mobile_val = str(row['mobile']).strip() if 'mobile' in df.columns and pd.notna(row['mobile']) else None
+        if not email_val and not mobile_val:
+            rejected += 1
+            continue
+
+        product_model_number = str(row['product_model_number']).strip() if 'product_model_number' in df.columns and pd.notna(row['product_model_number']) else None
+        if product_model_number:
+            product = db.query(Product).filter(
+                Product.company_id == current_company.id,
+                Product.model_number == product_model_number
+            ).first()
+            if not product:
+                raise HTTPException(status_code=400, detail=f"Invalid product_model_number: {product_model_number}")
+
         feedback = FeedbackCreate(
             company_id=current_company.id,
             channel=str(row['channel']),
             text=str(row['text']),
-            name=str(row['name']),
-            email_or_mobile=str(row['email_or_mobile']),
-            product_id=int(row['product_id']) if 'product_id' in df.columns and pd.notna(row['product_id']) else None,
+            name=str(row['name']).strip() if 'name' in df.columns and pd.notna(row['name']) else None,
+            email=email_val,
+            mobile=mobile_val,
+            product_model_number=product_model_number,
         )
         feedbacks.append(feedback)
     inserted = create_feedbacks_bulk(db, feedbacks)
-    return {"inserted": len(inserted)}
+    return {"inserted": len(inserted), "rejected_missing_email_and_mobile": rejected}
 
 
 @router.post("/import_google_forms")
@@ -68,8 +90,7 @@ def import_google_forms(sheet_id: str, db: Session = Depends(get_db), current_co
             channel='google_forms',
             text=text,
             name=name,
-            email_or_mobile=email_or_mobile,
-            product_id=None,
+            product_model_number=None,
         )
         feedbacks.append(feedback)
     inserted = create_feedbacks_bulk(db, feedbacks)
@@ -104,8 +125,7 @@ def import_emails(db: Session = Depends(get_db), current_company=Depends(get_cur
             channel='email',
             text=f"{subject}: {body}",
             name=name,
-            email_or_mobile=email_or_mobile,
-            product_id=None,
+            product_model_number=None,
         )
         feedbacks.append(feedback)
     inserted = create_feedbacks_bulk(db, feedbacks)

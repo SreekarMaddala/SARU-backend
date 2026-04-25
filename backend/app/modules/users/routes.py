@@ -12,9 +12,10 @@ def list_users(db: Session = Depends(get_db), current_company=Depends(get_curren
     users = db.query(User).filter(User.company_id == current_company.id).all()
     return [
         {
-            "id": user.email_or_mobile,
+            "id": user.id,
             "name": user.name,
-            "email": user.email_or_mobile,
+            "email": user.email,
+            "mobile": user.mobile,
             "created_at": user.created_at.isoformat() if user.created_at else None
         }
         for user in users
@@ -31,9 +32,10 @@ def list_users_public(db: Session = Depends(get_db)):
     users = db.query(User).all()
     return [
         {
-            "id": user.email_or_mobile,
+            "id": user.id,
             "name": user.name,
-            "email": user.email_or_mobile,
+            "email": user.email,
+            "mobile": user.mobile,
             "created_at": user.created_at.isoformat() if user.created_at else None
         }
         for user in users

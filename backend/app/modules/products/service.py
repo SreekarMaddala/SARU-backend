@@ -15,6 +15,9 @@ def create_product(db: Session, product: ProductCreate, company_id: int):
     return db_product
 
 
-def get_product_by_id(db: Session, product_id: int, company_id: int):
-    return db.query(Product).filter(Product.id == product_id, Product.company_id == company_id).first()
+def get_product_by_company_and_model(db: Session, company_id: int, model_number: str):
+    return db.query(Product).filter(
+        Product.company_id == company_id,
+        Product.model_number == model_number
+    ).first()
 
