@@ -111,4 +111,13 @@ def import_emails(db: Session = Depends(get_db), current_company=Depends(get_cur
     inserted = create_feedbacks_bulk(db, feedbacks)
     return {"inserted": len(inserted)}
 
-@router.post("/feedback/import_twitter")\ndef import_twitter(\n    handle: str,\n    db: Session = Depends(get_db),\n    current_company=Depends(get_current_company)\n):\n    return {"error": "Twitter import disabled (snscrape incompatible with Python 3.13)"}\n\n# DISABLED: snscrape Twitter scraper (Python 3.13 incompatible)\n# Original code commented out for reference:
+@router.post("/feedback/import_twitter")
+def import_twitter(
+    handle: str,
+    db: Session = Depends(get_db),
+    current_company=Depends(get_current_company)
+):
+    return {"error": "Twitter import disabled (snscrape incompatible with Python 3.13)"}
+
+# DISABLED: snscrape Twitter scraper (Python 3.13 incompatible)
+# Original code commented out for reference:
