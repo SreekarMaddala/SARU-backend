@@ -11,7 +11,7 @@ from googleapiclient.discovery import build
 from google.oauth2.credentials import Credentials
 import imaplib
 import email
-import snscrape.modules.twitter as sntwitter  # <- replaced Tweepy
+# import snscrape.modules.twitter as sntwitter  # <- replaced Tweepy - DISABLED (Python 3.13 incompatible)
 
 router = APIRouter()
 
@@ -111,77 +111,4 @@ def import_emails(db: Session = Depends(get_db), current_company=Depends(get_cur
     inserted = create_feedbacks_bulk(db, feedbacks)
     return {"inserted": len(inserted)}
 
-@router.post("/feedback/import_twitter")
-def import_twitter(
-    handle: str,
-    db: Session = Depends(get_db),
-    current_company=Depends(get_current_company)
-):
-    from datetime import datetime, timedelta
-    from collections import defaultdict
-    import snscrape.modules.twitter as sntwitter
-    from backend.models.feedback import Feedback as FeedbackModel  # SQLAlchemy model
-
-    feedbacks = []
-    now = datetime.utcnow()
-    yesterday = now - timedelta(days=1)
-
-    # Inclusive "until" → add +1 day
-    query = f"@{handle} since:{yesterday.date()} until:{(now + timedelta(days=1)).date()}"
-
-    user_count = defaultdict(int)
-
-    def is_recent_duplicate(text: str) -> bool:
-        return db.query(FeedbackModel).filter(
-            FeedbackModel.text == text,
-            FeedbackModel.created_at >= yesterday
-        ).first() is not None
-
-    # Enforce 24h gap between fetches for this company
-    latest_feedback = db.query(FeedbackModel).filter(
-        FeedbackModel.channel == "twitter",
-        FeedbackModel.company_id == current_company.id
-    ).order_by(FeedbackModel.created_at.desc()).first()
-
-    if latest_feedback:
-        next_available_time = latest_feedback.created_at + timedelta(hours=24)
-        if now < next_available_time:
-            return {
-                "inserted": 0,
-                "message": f"You can fetch tweets again after {next_available_time.strftime('%Y-%m-%d %H:%M:%S')} UTC"
-            }
-
-    for i, tweet in enumerate(sntwitter.TwitterSearchScraper(query).get_items()):
-        username = tweet.user.username
-
-        # Skip duplicates and limit per-user mentions
-        if is_recent_duplicate(tweet.content):
-            continue
-        if user_count[username] >= 3:
-            continue
-
-        # ✅ Build SQLAlchemy Feedback model with correct fields
-        feedback = FeedbackModel(
-            company_id=current_company.id,
-            channel="twitter",
-            text=tweet.content,
-            likes=getattr(tweet, "likeCount", 0),
-            name=username,
-            email_or_mobile=f"@{username}",
-            product_id=None,
-            created_at=now,
-        )
-        feedbacks.append(feedback)
-        user_count[username] += 1
-
-    if not feedbacks:
-        return {
-            "inserted": 0,
-            "message": "No new tweets available after applying limits."
-        }
-
-    # ✅ Bulk insert raw Feedback models
-    db.add_all(feedbacks)
-    db.commit()
-
-    return {"inserted": len(feedbacks)}
+@router.post("/feedback/import_twitter")\ndef import_twitter(\n    handle: str,\n    db: Session = Depends(get_db),\n    current_company=Depends(get_current_company)\n):\n    return {"error": "Twitter import disabled (snscrape incompatible with Python 3.13)"}\n\n# DISABLED: snscrape Twitter scraper (Python 3.13 incompatible)\n# Original code commented out for reference:
