@@ -24,6 +24,32 @@ def upgrade() -> None:
     products_cols = {c["name"]: c for c in insp.get_columns("products")}
     feedback_cols = {c["name"]: c for c in insp.get_columns("feedback")}
 
+    # ---- Feedback: migrate product_id -> product_model_number ----
+    if "product_model_number" not in feedback_cols:
+        op.add_column("feedback", sa.Column("product_model_number", sa.String(length=100), nullable=True))
+
+    # Backfill product_model_number from products via product_id
+    if "product_id" in feedback_cols:
+        op.execute(text("""
+            UPDATE feedback f
+            SET product_model_number = p.model_number
+            FROM products p
+            WHERE f.product_id = p.id
+              AND f.product_model_number IS NULL;
+        """))
+
+        # Drop old FK constraint
+        op.execute(text("""
+            ALTER TABLE feedback
+            DROP CONSTRAINT IF EXISTS feedback_product_id_fkey;
+        """))
+
+        # Drop old index
+        op.execute(text("DROP INDEX IF EXISTS ix_feedback_product_id"))
+
+        # Drop product_id column
+        op.drop_column("feedback", "product_id")
+
     # ---- Products: ensure model_number and company_id are NOT NULL ----
     # Delete products without model_number (they can't be part of a composite PK)
     op.execute(text("""
@@ -61,32 +87,6 @@ def upgrade() -> None:
         ADD CONSTRAINT pk_products_company_id_model_number
         PRIMARY KEY (company_id, model_number);
     """))
-
-    # ---- Feedback: migrate product_id -> product_model_number ----
-    if "product_model_number" not in feedback_cols:
-        op.add_column("feedback", sa.Column("product_model_number", sa.String(length=100), nullable=True))
-
-    # Backfill product_model_number from products via product_id
-    if "product_id" in feedback_cols:
-        op.execute(text("""
-            UPDATE feedback f
-            SET product_model_number = p.model_number
-            FROM products p
-            WHERE f.product_id = p.id
-              AND f.product_model_number IS NULL;
-        """))
-
-        # Drop old FK constraint
-        op.execute(text("""
-            ALTER TABLE feedback
-            DROP CONSTRAINT IF EXISTS feedback_product_id_fkey;
-        """))
-
-        # Drop old index
-        op.execute(text("DROP INDEX IF EXISTS ix_feedback_product_id"))
-
-        # Drop product_id column
-        op.drop_column("feedback", "product_id")
 
     # Create composite FK on feedback (company_id, product_model_number) -> products
     op.execute(text("""
