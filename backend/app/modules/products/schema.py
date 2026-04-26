@@ -1,5 +1,6 @@
 from pydantic import BaseModel, ConfigDict
 from typing import Optional
+from datetime import datetime
 
 
 class ProductBase(BaseModel):
@@ -7,7 +8,6 @@ class ProductBase(BaseModel):
     name: str
     description: Optional[str] = None
     model_number: str
-    company_id: int
 
 
 class ProductCreate(ProductBase):
@@ -15,6 +15,9 @@ class ProductCreate(ProductBase):
 
 
 class ProductRead(ProductBase):
+    id: int
+    created_at: datetime
+
     class Config:
         from_attributes = True
 

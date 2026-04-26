@@ -127,8 +127,8 @@ def create_feedback(db: Session, feedback: Union[FeedbackCreate, dict]):
     )
 
     payload = feedback.model_dump()
-    payload.pop("email", None)
-    payload.pop("mobile", None)
+    payload["email"] = _normalize_email(feedback.email)
+    payload["mobile"] = _normalize_mobile(feedback.mobile)
     db_feedback = Feedback(**payload, user_id=user_id)
     db.add(db_feedback)
     db.commit()
@@ -154,8 +154,8 @@ def create_feedbacks_bulk(db: Session, feedbacks: List[Union[FeedbackCreate, dic
             company_id=feedback.company_id,
         )
         payload = feedback.model_dump()
-        payload.pop("email", None)
-        payload.pop("mobile", None)
+        payload["email"] = _normalize_email(feedback.email)
+        payload["mobile"] = _normalize_mobile(feedback.mobile)
         db_feedbacks.append(Feedback(**payload, user_id=user_id))
     db.add_all(db_feedbacks)
     db.commit()

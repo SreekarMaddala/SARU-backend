@@ -3,7 +3,11 @@ from sqlalchemy.orm import Session
 from backend.app.db.session import get_db
 from backend.app.modules.products.model import Product
 from backend.app.modules.products.schema import ProductCreate, ProductRead, ProductUpdate
-from backend.app.modules.products.service import get_products_by_company, create_product, get_product_by_company_and_model
+from backend.app.modules.products.service import (
+    get_products_by_company,
+    create_product,
+    get_product_by_company_and_id,
+)
 from backend.app.core.security import get_current_company
 
 router = APIRouter(prefix="/products", tags=["products"])
@@ -19,13 +23,19 @@ def list_products(db: Session = Depends(get_db), current_company=Depends(get_cur
 def create_product_route(payload: ProductCreate, db: Session = Depends(get_db), current_company=Depends(get_current_company)):
     if not payload.name:
         raise HTTPException(status_code=400, detail="name is required")
+    existing = db.query(Product).filter(
+        Product.company_id == current_company.id,
+        Product.model_number == payload.model_number,
+    ).first()
+    if existing:
+        raise HTTPException(status_code=400, detail="Model number already exists")
     product = create_product(db, payload, current_company.id)
     return product
 
 
-@router.put("/{model_number}", response_model=ProductRead)
-def update_product(model_number: str, payload: ProductUpdate, db: Session = Depends(get_db), current_company=Depends(get_current_company)):
-    product = get_product_by_company_and_model(db, current_company.id, model_number)
+@router.put("/{product_id}/", response_model=ProductRead)
+def update_product(product_id: int, payload: ProductUpdate, db: Session = Depends(get_db), current_company=Depends(get_current_company)):
+    product = get_product_by_company_and_id(db, current_company.id, product_id)
     if not product:
         raise HTTPException(status_code=404, detail="Product not found")
 
@@ -41,9 +51,9 @@ def update_product(model_number: str, payload: ProductUpdate, db: Session = Depe
     return product
 
 
-@router.delete("/{model_number}")
-def delete_product(model_number: str, db: Session = Depends(get_db), current_company=Depends(get_current_company)):
-    product = get_product_by_company_and_model(db, current_company.id, model_number)
+@router.delete("/{product_id}/")
+def delete_product(product_id: int, db: Session = Depends(get_db), current_company=Depends(get_current_company)):
+    product = get_product_by_company_and_id(db, current_company.id, product_id)
     if not product:
         raise HTTPException(status_code=404, detail="Product not found")
 
