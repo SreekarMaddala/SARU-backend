@@ -16,6 +16,7 @@ from backend.app.modules.companies.routes import router as companies_router
 from backend.app.modules.users.routes import router as users_router
 from backend.app.modules.feedback.routes import router as feedback_router
 from backend.app.modules.products.routes import router as products_router
+from backend.app.modules.customers.routes import router as customers_router
 from backend.app.modules.analytics.routes import router as analytics_router
 from backend.app.modules.ai.routes import router as ai_router
 
@@ -43,6 +44,7 @@ app.include_router(companies_router)
 app.include_router(users_router)
 app.include_router(feedback_router)
 app.include_router(products_router)
+app.include_router(customers_router)
 app.include_router(analytics_router)
 app.include_router(ai_router)
 

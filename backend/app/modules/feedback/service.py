@@ -6,27 +6,56 @@ from typing import List, Union
 from textblob import TextBlob
 import re
 
+try:
+    from transformers import pipeline
+except Exception:
+    pipeline = None
+
+try:
+    import spacy
+except Exception:
+    spacy = None
+
+sentiment_pipeline = pipeline("sentiment-analysis") if pipeline else None
+nlp = spacy.load("en_core_web_sm") if spacy else None
+
 
 def get_feedbacks(db: Session, company_id: int):
     return db.query(Feedback).filter(Feedback.company_id == company_id).all()
 
 
 def enrich_feedback_data(text: str) -> dict:
-    blob = TextBlob(text)
-    sentiment_score = blob.sentiment.polarity
-    if sentiment_score > 0.1:
-        sentiment = "positive"
-    elif sentiment_score < -0.1:
-        sentiment = "negative"
+    # Prefer transformer model when available; fallback to TextBlob polarity.
+    if sentiment_pipeline:
+        sent = sentiment_pipeline(text)[0]
+        sentiment = sent["label"].lower()
+        sentiment_score = sent["score"]
     else:
-        sentiment = "neutral"
+        polarity = TextBlob(text).sentiment.polarity
+        sentiment = "positive" if polarity > 0 else "negative" if polarity < 0 else "neutral"
+        sentiment_score = abs(polarity)
 
-    topics = ", ".join(set(blob.noun_phrases + [word for word, pos in blob.tags if pos in ['NN', 'NNS', 'JJ', 'JJR', 'JJS']][:5]))
+    # Prefer spaCy noun/adjective extraction; fallback to frequent words.
+    if nlp:
+        doc = nlp(text)
+        topics = list(set([t.text for t in doc if t.pos_ in ["NOUN", "ADJ"]]))[:5]
+    else:
+        tokens = re.findall(r"[A-Za-z][A-Za-z']{2,}", text.lower())
+        stop_words = {
+            "the", "and", "for", "with", "this", "that", "was", "are",
+            "but", "you", "your", "our", "from", "have", "has", "had",
+        }
+        topics = []
+        for token in tokens:
+            if token not in stop_words and token not in topics:
+                topics.append(token)
+            if len(topics) == 5:
+                break
 
     return {
         "sentiment": sentiment,
         "sentiment_score": sentiment_score,
-        "topics": topics
+        "topics": ", ".join(topics)
     }
 
 
